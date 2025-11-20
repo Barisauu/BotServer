@@ -11,7 +11,7 @@ import telebot
 # ----------------------------------------------------
 
 BOT_TOKEN = "8322920563:AAFnm1-xzsArXQnRBJNa8I3uiH-nqL5goPY"
-WEBHOOK_URL = "https://hooklog.co/uuid=0fa909c995226f8c180e1908730d05a0"   # <<< REPLACE THIS
+WEBHOOK_URL = "https://eouetsdgkiomlf6.m.pipedream.net"   # <<< REPLACE THIS
 
 tz = pytz.timezone("Africa/Lagos")
 
