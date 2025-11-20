@@ -4,6 +4,7 @@ import requests
 from datetime import datetime
 import pytz
 from flask import Flask
+from telebot import types
 import telebot
 
 # ----------------------------------------------------
@@ -69,9 +70,11 @@ def start_cmd(message):
     code = get_daily_code()
 
     # Send to Telegram
-    from telebot import types
+    
 
-code = get_daily_code()
+
+
+
 
 markup = types.InlineKeyboardMarkup()
 button = types.InlineKeyboardButton(
@@ -86,6 +89,7 @@ bot.send_message(
     parse_mode='Markdown',
     reply_markup=markup
 )
+
 
     # Save to Firebase instead of webhook
     save_code_to_firebase(code)
