@@ -1,92 +1,99 @@
-import telebot
 import random
-from flask import Flask, jsonify, send_from_directory
-from flask_cors import CORS
-import threading
 from datetime import datetime
 import pytz
-import ably
-from ably import AblyRest
+import threading
+from flask import Flask
+from ably import AblyRest, AblyRealtime
+import telebot
 
-# -----------------------------
-# Telegram Bot Setup
-# -----------------------------
+# -------------------------
+# SETTINGS
+# -------------------------
+
 BOT_TOKEN = "8322920563:AAFnm1-xzsArXQnRBJNa8I3uiH-nqL5goPY"
-bot = telebot.TeleBot(BOT_TOKEN)
 
-# -----------------------------
-# Ably Setup
-# -----------------------------
-ABLY_API_KEY = "RL1tBQ.35M5xw:mxRYIB9D0t2q-3BUcO2Gab1SbtE7oy8QA_S1CkWlPps"  # Replace with your Ably API Key
-ably_client = AblyRest(ABLY_API_KEY)
-ably_channel = ably_client.channels.get("daily-code")
+ABLY_KEY = "RL1tBQ.35M5xw:mxRYIB9D0t2q-3BUcO2Gab1SbtE7oy8QA_S1CkWlPps"
+CHANNEL_NAME = "daily-code"
 
-# -----------------------------
-# Daily Code Logic
-# -----------------------------
-daily_code_data = {"code": None, "last_generated": None}
-NIGERIA_TZ = pytz.timezone("Africa/Lagos")
+tz = pytz.timezone("Africa/Lagos")
+current_code = None
+last_generated_date = None
+
+# -------------------------
+# DAILY CODE LOGIC
+# -------------------------
 
 def get_daily_code():
-    now = datetime.now(NIGERIA_TZ)
-    today_3pm = now.replace(hour=15, minute=0, second=0, microsecond=0)
+    global current_code, last_generated_date
 
-    # Generate new code if none exists or last_generated < today 3PM and now >= 3PM
-    if (daily_code_data["code"] is None or
-        daily_code_data["last_generated"] < today_3pm <= now):
-        new_code = str(random.randint(100000, 999999))
-        daily_code_data["code"] = new_code
-        daily_code_data["last_generated"] = now
+    now = datetime.now(tz)
 
-        # Publish new code to Ably
-        ably_channel.publish("update", {"code": new_code})
+    if current_code is None:
+        current_code = str(random.randint(100000, 999999))
+        last_generated_date = now.date()
+        return current_code
 
-    return daily_code_data["code"]
+    if now.date() != last_generated_date and now.hour >= 15:
+        current_code = str(random.randint(100000, 999999))
+        last_generated_date = now.date()
 
-# -----------------------------
-# Telegram Command
-# -----------------------------
+    return current_code
+
+
+# -------------------------
+# ABLY REALTIME LISTENER (HTML → SERVER)
+# -------------------------
+
+ably_r = AblyRealtime(ABLY_KEY)
+ably_rest = AblyRest(ABLY_KEY)
+channel = ably_r.channels.get(CHANNEL_NAME)
+
+def on_message(msg):
+    if msg.name == "request-code":
+        code = get_daily_code()
+        ably_rest.channels.get(CHANNEL_NAME).publish("return-code", {"code": code})
+
+channel.subscribe(on_message)
+
+
+# -------------------------
+# TELEGRAM BOT
+# -------------------------
+
+bot = telebot.TeleBot(BOT_TOKEN)
+
 @bot.message_handler(commands=['start'])
-def send_code(message):
+def start_cmd(message):
     code = get_daily_code()
-    
-    markup = telebot.types.InlineKeyboardMarkup()
-    button = telebot.types.InlineKeyboardButton(
-        text=f"Copy Code: {code}",
-        url=f"tg://msg_url?text={code}"
-    )
-    markup.add(button)
-
     bot.send_message(
         message.chat.id,
-        f"Welcome! Here is today's 6-digit code:\n\n{code}\n\nTap the button below to copy it.",
-        reply_markup=markup
+        f"Your Daily Universal Code:\n\n🔐 *{code}*\n\nThis code updates daily at *3PM Nigeria time*.",
+        parse_mode='Markdown'
     )
 
-# -----------------------------
-# Flask Web Server
-# -----------------------------
-app = Flask('')
-CORS(app)  # Optional if you want to fetch via /daily-code
 
-@app.route('/')
+def run_bot():
+    bot.infinity_polling()
+
+
+# -------------------------
+# FLASK FOR RENDER
+# -------------------------
+
+app = Flask(__name__)
+
+@app.route("/")
 def home():
-    return "Bot is running!"
+    return "Telegram Bot + Ably Daily Code Server Running Successfully!"
 
-@app.route('/daily-code', methods=['GET'])
-def daily_code_endpoint():
-    return jsonify({"code": get_daily_code()})
-
-# Serve HTML page from /static
-@app.route('/app')
-def serve_html():
-    return send_from_directory('static', 'index.html')
 
 def run_flask():
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host="0.0.0.0", port=10000)
 
-# -----------------------------
-# Start Flask + Telegram Bot
-# -----------------------------
+
+# -------------------------
+# START EVERYTHING
+# -------------------------
+
 threading.Thread(target=run_flask).start()
-bot.infinity_polling()
+threading.Thread(target=run_bot).start()
