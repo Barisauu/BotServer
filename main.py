@@ -2,6 +2,8 @@ import telebot
 import random
 from flask import Flask, jsonify
 from flask_cors import CORS
+
+CORS(app, resources={r"/*": {"origins": "*"}})
 import threading
 from datetime import datetime
 import pytz
