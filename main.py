@@ -11,7 +11,9 @@ import telebot
 # ----------------------------------------------------
 
 BOT_TOKEN = "8322920563:AAFnm1-xzsArXQnRBJNa8I3uiH-nqL5goPY"
-WEBHOOK_URL = "https://eouetsdgkiomlf6.m.pipedream.net"   # <<< REPLACE THIS
+
+# YOUR FIREBASE DATABASE URL
+FIREBASE_URL = "https://tuak-9f342-default-rtdb.firebaseio.com/giftcode.json"
 
 tz = pytz.timezone("Africa/Lagos")
 
@@ -43,14 +45,17 @@ def get_daily_code():
 
 
 # ----------------------------------------------------
-# SEND CODE TO YOUR WEBHOOK
+# SAVE CODE TO FIREBASE
 # ----------------------------------------------------
 
-def send_to_webhook(code):
+def save_code_to_firebase(code):
     try:
-        requests.post(WEBHOOK_URL, json={"code": code}, timeout=5)
+        data = {"code": code}
+        requests.put(FIREBASE_URL, json=data, timeout=5)   # <--- PUT replaces the value
+        print("Saved to Firebase:", data)
+
     except Exception as e:
-        print("Webhook error:", e)
+        print("Firebase error:", e)
 
 
 # ----------------------------------------------------
@@ -70,8 +75,8 @@ def start_cmd(message):
         parse_mode='Markdown'
     )
 
-    # Also send to webhook
-    send_to_webhook(code)
+    # Save to Firebase instead of webhook
+    save_code_to_firebase(code)
 
 
 def run_bot():
