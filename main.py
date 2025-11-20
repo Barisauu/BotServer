@@ -5,15 +5,12 @@ from datetime import datetime
 import pytz
 from flask import Flask
 import telebot
-from telebot import types
 
 # ----------------------------------------------------
 # SETTINGS
 # ----------------------------------------------------
 
 BOT_TOKEN = "8322920563:AAFnm1-xzsArXQnRBJNa8I3uiH-nqL5goPY"
-
-# Firebase Realtime Database URL (replace with your own)
 FIREBASE_URL = "https://tuak-9f342-default-rtdb.firebaseio.com/giftcode.json"
 
 tz = pytz.timezone("Africa/Lagos")
@@ -48,7 +45,7 @@ def get_daily_code():
 def save_code_to_firebase(code):
     try:
         data = {"code": code}
-        requests.put(FIREBASE_URL, json=data, timeout=5)  # PUT replaces existing value
+        requests.put(FIREBASE_URL, json=data, timeout=5)
         print("Saved to Firebase:", data)
     except Exception as e:
         print("Firebase error:", e)
@@ -63,20 +60,11 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def start_cmd(message):
     code = get_daily_code()
 
-    # Inline button to "copy" code
-    markup = types.InlineKeyboardMarkup()
-    copy_button = types.InlineKeyboardButton(
-        text="Copy Code 🔐",
-        switch_inline_query_current_chat=code  # Puts the code in input field
-    )
-    markup.add(copy_button)
-
-    # Send the code to Telegram
+    # Send the code to Telegram WITHOUT copy button
     bot.send_message(
         message.chat.id,
-        f"Your BASF Gift Code is:\n\n🔐 *{code}*\n\nUpdates daily at 3PM Nigeria time.",
-        parse_mode='Markdown',
-        reply_markup=markup
+        f"🎁 Your BASF Gift Code is ✨🎉:\n\n*{code}*\n\nUpdates daily at 3PM Nigeria time.",
+        parse_mode='Markdown'
     )
 
     # Save code to Firebase
