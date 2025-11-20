@@ -4,8 +4,8 @@ import requests
 from datetime import datetime
 import pytz
 from flask import Flask
-from telebot import types
 import telebot
+from telebot import types
 
 # ----------------------------------------------------
 # SETTINGS
@@ -13,14 +13,12 @@ import telebot
 
 BOT_TOKEN = "8322920563:AAFnm1-xzsArXQnRBJNa8I3uiH-nqL5goPY"
 
-# YOUR FIREBASE DATABASE URL
+# Firebase Realtime Database URL (replace with your own)
 FIREBASE_URL = "https://tuak-9f342-default-rtdb.firebaseio.com/giftcode.json"
 
 tz = pytz.timezone("Africa/Lagos")
-
 current_code = None
 last_generated_date = None
-
 
 # ----------------------------------------------------
 # DAILY CODE GENERATOR (3PM NIGERIA TIME)
@@ -28,7 +26,6 @@ last_generated_date = None
 
 def get_daily_code():
     global current_code, last_generated_date
-
     now = datetime.now(tz)
 
     # First-time generation
@@ -44,7 +41,6 @@ def get_daily_code():
 
     return current_code
 
-
 # ----------------------------------------------------
 # SAVE CODE TO FIREBASE
 # ----------------------------------------------------
@@ -52,12 +48,10 @@ def get_daily_code():
 def save_code_to_firebase(code):
     try:
         data = {"code": code}
-        requests.put(FIREBASE_URL, json=data, timeout=5)   # <--- PUT replaces the value
+        requests.put(FIREBASE_URL, json=data, timeout=5)  # PUT replaces existing value
         print("Saved to Firebase:", data)
-
     except Exception as e:
         print("Firebase error:", e)
-
 
 # ----------------------------------------------------
 # TELEGRAM BOT
@@ -69,35 +63,27 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def start_cmd(message):
     code = get_daily_code()
 
-    # Send to Telegram
-    
+    # Inline button to "copy" code
+    markup = types.InlineKeyboardMarkup()
+    copy_button = types.InlineKeyboardButton(
+        text="Copy Code 🔐",
+        switch_inline_query_current_chat=code  # Puts the code in input field
+    )
+    markup.add(copy_button)
 
+    # Send the code to Telegram
+    bot.send_message(
+        message.chat.id,
+        f"Your BASF Gift Code is:\n\n🔐 *{code}*\n\nUpdates daily at 3PM Nigeria time.",
+        parse_mode='Markdown',
+        reply_markup=markup
+    )
 
-
-
-
-markup = types.InlineKeyboardMarkup()
-button = types.InlineKeyboardButton(
-    text=f"Copy Code 🔐",
-    switch_inline_query_current_chat=code  # Puts the code in the input field so the user can copy
-)
-markup.add(button)
-
-bot.send_message(
-    message.chat.id,
-    f"Your BASF Gift Code is:\n\n🔐 *{code}*\n\nUpdates daily at 3PM Nigeria time.",
-    parse_mode='Markdown',
-    reply_markup=markup
-)
-
-
-    # Save to Firebase instead of webhook
+    # Save code to Firebase
     save_code_to_firebase(code)
-
 
 def run_bot():
     bot.infinity_polling()
-
 
 # ----------------------------------------------------
 # FLASK SERVER FOR RENDER
@@ -109,13 +95,11 @@ app = Flask(__name__)
 def home():
     return "Telegram Bot Daily Code Server Running Successfully!"
 
-
 def run_flask():
     app.run(host="0.0.0.0", port=10000)
 
-
 # ----------------------------------------------------
-# START BOT + FLASK IN PARALLEL
+# START EVERYTHING
 # ----------------------------------------------------
 
 threading.Thread(target=run_flask).start()
