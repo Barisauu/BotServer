@@ -69,11 +69,23 @@ def start_cmd(message):
     code = get_daily_code()
 
     # Send to Telegram
-    bot.send_message(
-        message.chat.id,
-        f"Your Daily Universal Code:\n\n🔐 *{code}*\n\nUpdates daily at 3PM Nigeria time.",
-        parse_mode='Markdown'
-    )
+    from telebot import types
+
+code = get_daily_code()
+
+markup = types.InlineKeyboardMarkup()
+button = types.InlineKeyboardButton(
+    text=f"Copy Code 🔐",
+    switch_inline_query_current_chat=code  # Puts the code in the input field so the user can copy
+)
+markup.add(button)
+
+bot.send_message(
+    message.chat.id,
+    f"Your BASF Gift Code is:\n\n🔐 *{code}*\n\nUpdates daily at 3PM Nigeria time.",
+    parse_mode='Markdown',
+    reply_markup=markup
+)
 
     # Save to Firebase instead of webhook
     save_code_to_firebase(code)
