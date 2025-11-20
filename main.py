@@ -1,6 +1,7 @@
 import telebot
 import random
 from flask import Flask, jsonify
+from flask_cors import CORS
 import threading
 from datetime import datetime
 import pytz
@@ -21,7 +22,7 @@ def get_daily_code():
     now = datetime.now(NIGERIA_TZ)
     today_3pm = now.replace(hour=15, minute=0, second=0, microsecond=0)
 
-    # Generate a new code if none exists or if last_generated < today 3PM and now >= 3PM
+    # Generate a new code if none exists or last_generated < today 3PM and now >= 3PM
     if (daily_code_data["code"] is None or
         daily_code_data["last_generated"] < today_3pm <= now):
         new_code = str(random.randint(100000, 999999))
@@ -51,9 +52,10 @@ def send_code(message):
     )
 
 # -----------------------------
-# Flask Web Server
+# Flask Web Server with CORS
 # -----------------------------
 app = Flask('')
+CORS(app)  # Enable CORS for all origins
 
 @app.route('/')
 def home():
